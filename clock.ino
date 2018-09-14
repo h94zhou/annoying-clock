@@ -55,14 +55,14 @@ enum Code {
 };
 
 /**Specific variables for the current alarm type: konami requires the input of the konami code on a polling basis, simon says is self-explanatory**/
-const Code konami[] = {up, up, down, down, left, right, left, right, a, b, start};
+const Code konami[] = {none, up, up, down, down, left, right, left, right, a, b, start};
 static const bool SIMON_ON = false;
 const int simonLength = 5;
 Code simon[simonLength];
 static int simonDisplay;  //with CODE, determines whether display is showing player input or simon says sequence
 
 //when in konami mode, tracks progress through the konami code, when in simon says mode, tracks which stage the player is on (-1 is failed/start, sequence starts at 0)
-static int CODE = -1;
+static int CODE = 0;
 static bool ALARM_ON = true;
 
 static Code codeState = none; //current input state
@@ -178,26 +178,24 @@ void loop()
     }
 
     if (SIMON_ON){
-      if (CODE < 0){
-        //start of sequence
-        
-      }
+      
+      simonDisplay = 2*(CODE+1);
     }else{
       if (codeState == konami[CODE+1]){
         CODE++;
       }else if (codeState != none){
-        CODE = -1;
+        CODE = 0;
       }
   
-      if (CODE >= 10){
+      if (CODE >= 11){
         //completed code, turn off alarm
         alarm_ring = 1;
         ALARM_ON = false;
         digitalWrite(LED_PIN, LOW);
         CODE ++;
       }
-      if (CODE > 10){
-        CODE = -1;
+      if (CODE > 11){
+        CODE = 0;
         codeState = none;
       }
 
@@ -208,13 +206,13 @@ void loop()
   //-------Time 
   // setting-------// 
   state3=digitalRead(SET_BTN);
-  if(state3==1 && CODE < 0){
+  if(state3==1 && CODE <= 0){
     time_mode = !time_mode;
   }
 
   //---Set Hour---//
   state1=digitalRead(HR_BTN); 
-  if(state1==1 && CODE < 0) 
+  if(state1==1 && CODE <= 0) 
   { 
     if(time_mode){
       //set time
@@ -235,7 +233,7 @@ void loop()
   } 
   //---Set Minute---//
   state2=digitalRead(MIN_BTN); 
-  if(state2==1 && CODE < 0){ 
+  if(state2==1 && CODE <= 0){ 
     if(time_mode){
       //set time
       s=0; 
@@ -253,7 +251,7 @@ void loop()
 } 
 
 /*
- * Returns character to display on lcd based on current progress in code
+ * Returns character to display on lcd
  */
 char displayCode(Code code){
   switch(code){
@@ -278,7 +276,7 @@ char displayCode(Code code){
 }
 
 /*
- * Reads joystick directional input, assigns to the code state (up, down, left, right)
+ * Reads joystick directional input, assigns to the code state (up, down, left, right, or none)
  */
 void readJoystick(){
   int x = analogRead(X_PIN);
@@ -306,6 +304,9 @@ void readJoystick(){
   }
 }
 
+/**
+ * Toggles on board LED indicating whether the alarm is currently turned on or off
+**/
 void toggle_alarm(){
   btnState = digitalRead(ALARM_BTN);
   ALARM_ON = !ALARM_ON;
@@ -316,6 +317,10 @@ void toggle_alarm(){
   }
 }
 
+/**
+ * Generates a sequence of random inputs
+ * Uses static int simonLength for length of array, changes parameter array by pass by pointer
+**/
 void randomizeCode(Code* arr){
   for (int i = 0; i < simonLength; ++i){
     arr[i] = (Code)random(1,7);
